@@ -10,7 +10,7 @@ class Channel:
     description: str
     country: str
     published_at: str
-    thumbnails: str
+    thumbnail: str
 
     def dict(self):
         return asdict(self)

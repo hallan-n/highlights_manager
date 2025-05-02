@@ -1,15 +1,31 @@
-import os
-import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../app')))
 
 from main import get_channel_info
 
-def test_get_channel_info_success(mocker):
+def test_get_channel_info_success(mocker, channel):
     mock_get = mocker.patch('httpx.get')
     mock_get.return_value.status_code = 200
-    mock_get.return_value.json.return_value = {'items': ['teste']}
-    resultado = get_channel_info('https://www.youtube.com/@canal_teste')
-    assert resultado == "teste"
+    mock_get.return_value.json.return_value = {
+        'items': [
+            {
+                'etag': 'tag_mock',
+                'id': 'id_mock',
+                'snippet': {
+                    'title': 'name_mock',
+                    'description': 'description_mock',
+                    'customUrl': 'custom_url_mock',
+                    'publishedAt': 'published_at_mock',
+                    'thumbnails': {
+                        'high': {
+                            'url': 'url_mock',
+                        }
+                    },
+                    'country': 'country_mock'
+                }
+            }
+        ]
+    }
+    result = get_channel_info('https://www.youtube.com/@canal_teste')
+    assert result.dict() == channel.dict()
     
 def test_get_channel_info_no_items(mocker):
     mock_get = mocker.patch('httpx.get')
