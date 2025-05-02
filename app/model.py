@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict
+import json
 
 @dataclass
 class Channel:
@@ -14,3 +15,6 @@ class Channel:
 
     def dict(self):
         return asdict(self)
+
+    def json(self):
+        return json.dumps(asdict(self))

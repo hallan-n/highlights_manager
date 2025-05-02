@@ -3,13 +3,20 @@ from consts import API_KEY, BASE_URL
 from logger import logger
 import re
 from model import Channel
+from cache import get_value, set_value
+import json 
 
-def get_channel_info(custom_url: str) -> Channel:
+async def get_channel_info(custom_url: str) -> Channel:
     if not re.match(r"https:\/\/www\.youtube\.com\/@\w+", custom_url):
         logger.error("URL no formato inválida.")
         return None
 
     url_split = custom_url.split('@')[1]
+
+    cached_channel = await get_value(url_split)
+    if cached_channel:
+        return Channel(**json.loads(cached_channel))
+
     params = {
         'part': 'snippet',
         'forHandle': url_split,
@@ -23,8 +30,7 @@ def get_channel_info(custom_url: str) -> Channel:
         if 'items' in data and len(data['items']) > 0:
             logger.info('Canal encontrado')
             data = data['items'][0]
-
-            return Channel(
+            channel = Channel(
                 id=data['id'],
                 etag=data['etag'],
                 name=data['snippet']['title'],
@@ -35,6 +41,8 @@ def get_channel_info(custom_url: str) -> Channel:
                 published_at=data['snippet']['publishedAt'],
                 thumbnail=data['snippet']['thumbnails']['high']['url']
             )
+            await set_value(url_split, channel.json())
+            return channel
         else:
             logger.error("Canal não encontrado.")
             return None
