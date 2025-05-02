@@ -1,4 +1,5 @@
 
+from model import Channel
 from main import get_channel_info
 
 def test_get_channel_info_success(mocker, channel):
@@ -25,6 +26,7 @@ def test_get_channel_info_success(mocker, channel):
         ]
     }
     result = get_channel_info('https://www.youtube.com/@canal_teste')
+    assert isinstance(result, Channel)
     assert result.dict() == channel.dict()
     
 def test_get_channel_info_no_items(mocker):
