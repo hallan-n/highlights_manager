@@ -1,7 +1,7 @@
 from redis.asyncio import Redis
 from logger import logger
 
-r = Redis(host='0.0.0.0', port=6379, db=0, decode_responses=True)
+r = Redis(host='0.0.0.0', port=6379, db=0, decode_responses=True, encoding='utf-8')
 
 async def set_value(key, value, expiration=None):
     try:

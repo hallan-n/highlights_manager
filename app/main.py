@@ -1,8 +1,8 @@
 import httpx
-from consts import API_KEY, BASE_URL
+from consts import API_KEY, BASE_URL, YOUTUBE_VIDEO_BASE_URL
 from logger import logger
 import re
-from model import Channel
+from model import Channel, Video
 from cache import get_value, set_value
 import json 
 
@@ -41,11 +41,59 @@ async def get_channel_info(custom_url: str) -> Channel:
                 published_at=data['snippet']['publishedAt'],
                 thumbnail=data['snippet']['thumbnails']['high']['url']
             )
-            await set_value(url_split, channel.json())
+            await set_value(data['id'], channel.json())
             return channel
         else:
             logger.error("Canal não encontrado.")
             return None
     else:
         logger.error(f"Erro ao buscar canal: {response.status_code}")
+        return None
+
+
+async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
+    params = {
+        'part': 'snippet',
+        'channelId': channel_id,
+        'key': API_KEY,
+        'type': 'video',
+        'order': 'date',
+        'maxResults': limit
+    }
+
+    if next_page_token:
+        params['pageToken'] = next_page_token
+        
+    response = httpx.get(f"{BASE_URL}/search", params=params)
+    
+    if response.status_code == 200:
+        data = response.json()
+        if 'items' in data and len(data['items']) > 0:
+            video_list: list[Video] = []
+            items = data['items']
+            logger.info(f'{len(items)} Vídeos encontrados')
+
+            for item in items:
+                video = Video(
+                    id=item['id']['videoId'],
+                    etag=item['etag'],
+                    url=YOUTUBE_VIDEO_BASE_URL + item['id']['videoId'],
+                    title=item['snippet']['title'],
+                    thumbnail=item['snippet']['thumbnails']['high']['url'],
+                    description=item['snippet']['description'],
+                    published_at=item['snippet']['publishedAt'],
+                    channel_id=item['snippet']['channelId'],
+                    channel_title=item['snippet']['channelTitle']
+                )
+                key = item['snippet']['channelId'] + item['id']['videoId']
+                await set_value(key, video.json())
+                video_list.append(video)
+            
+            return video_list
+
+        else:
+            logger.error("Canal não encontrado.")
+            return None
+    else:
+        logger.error(f"Erro ao buscar vídeo: {response.status_code}")
         return None
