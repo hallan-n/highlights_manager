@@ -1,9 +1,13 @@
 import httpx
 from consts import API_KEY, BASE_URL
 from logger import logger
-
+import re
 
 def get_channel_info(custom_url):
+    if not re.match(r"https:\/\/www\.youtube\.com\/@\w+", custom_url):
+        logger.error("URL no formato inválida.")
+        return None
+
     url_split = custom_url.split('@')[1]
     params = {
         'part': 'snippet',
@@ -24,7 +28,3 @@ def get_channel_info(custom_url):
     else:
         logger.error(f"Erro ao buscar canal: {response.status_code}")
         return None
-
-channel_info = get_channel_info("https://www.youtube.com/@milkz2")
-
-print(channel_info)
