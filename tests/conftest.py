@@ -1,5 +1,5 @@
 import pytest
-from app.model import Channel
+from model import Channel
 
 @pytest.fixture
 def channel():
