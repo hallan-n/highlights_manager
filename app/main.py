@@ -5,6 +5,44 @@ import re
 from model import Channel, Video
 from cache import get_value, set_value
 import json 
+from typing import Union
+
+async def fetch_channel(custom_id: str) -> Union[dict, None]:
+    async with httpx.AsyncClient() as client:
+        params = {
+            'part': 'snippet',
+            'forHandle': custom_id,
+            'key': API_KEY
+        }
+        response = await client.get(f"{BASE_URL}/channels", params=params)
+        if response.status_code == 200:
+            logger.info('Canal encontrado')
+            return response.json()
+        else:
+            logger.error(f"Erro ao buscar canal: {response.status_code}")
+            return None
+
+async def fetch_video(channel_id, next_page_token=None, limit=5):        
+    async with httpx.AsyncClient() as client:
+        params = {
+            'part': 'snippet',
+            'channelId': channel_id,
+            'key': API_KEY,
+            'type': 'video',
+            'order': 'date',
+            'maxResults': limit
+        }
+        if next_page_token:
+            params['pageToken'] = next_page_token
+        
+        response = await client.get(f"{BASE_URL}/videos", params=params)
+
+        if response.status_code == 200:
+            logger.info('Vídeos encontrados')
+            return response.json()
+        else:
+            logger.error(f"Erro ao buscar vídeos: {response.status_code}")
+            return None
 
 async def get_channel_info(custom_url: str) -> Channel:
     if not re.match(r"https:\/\/www\.youtube\.com\/@\w+", custom_url):
