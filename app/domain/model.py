@@ -2,7 +2,15 @@ from dataclasses import dataclass, asdict
 import json
 
 @dataclass
-class Channel:
+class Base:
+    def dict(self):
+        return asdict(self)
+
+    def json(self):
+        return json.dumps(asdict(self))
+
+@dataclass
+class Channel(Base):
     id: str
     etag: str
     name: str
@@ -13,15 +21,8 @@ class Channel:
     published_at: str
     thumbnail: str
 
-    def dict(self):
-        return asdict(self)
-
-    def json(self):
-        return json.dumps(asdict(self))
-
-
 @dataclass
-class Video:
+class Video(Base):
     id: str
     etag: str
     url: str
@@ -31,9 +32,3 @@ class Video:
     published_at: str
     channel_id: str
     channel_title: str
-
-    def dict(self):
-        return asdict(self)
-
-    def json(self):
-        return json.dumps(asdict(self))

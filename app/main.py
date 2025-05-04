@@ -2,7 +2,7 @@ import httpx
 from consts import API_KEY, BASE_URL, YOUTUBE_VIDEO_BASE_URL
 from app.infra.logger import logger
 import re
-from model import Channel, Video
+from app.domain.model import Channel, Video
 from app.infra.cache import get_value, set_value
 import json 
 

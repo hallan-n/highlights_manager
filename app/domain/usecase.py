@@ -1,0 +1,65 @@
+from app.infra.logger import logger
+import re
+from app.domain.model import Channel, Video
+from app.infra.cache import get_value, set_value
+import json 
+from app.infra.youtube_api import get_channel_id_by_custom_url, get_videos_by_channel_id
+
+async def get_channel_info(custom_url: str) -> Channel:
+    if not re.match(r"https:\/\/www\.youtube\.com\/@\w+", custom_url):
+        logger.error("URL no formato inválida.")
+        raise ValueError("URL no formato inválida.")
+    
+    url_split = custom_url.split('@')[1]
+    cached_channel = await get_value(url_split)
+    if cached_channel:
+        return Channel(**json.loads(cached_channel))
+
+    data = await get_channel_id_by_custom_url(url_split)
+    if not data:
+        logger.error("Canal não encontrado.")
+        raise ValueError("Canal não encontrado.")
+
+    if not 'items' in data and len(data['items']) <= 0:
+        logger.error("Canal não encontrado.")
+        raise ValueError("Canal não encontrado.")
+
+    data = data['items'][0]
+    channel = Channel(
+        id=data['id'],
+        etag=data['etag'],
+        name=data['snippet']['title'],
+        url=custom_url,
+        custom_url=url_split,
+        description=data['snippet']['description'],
+        country=data['snippet']['country'],
+        published_at=data['snippet']['publishedAt'],
+        thumbnail=data['snippet']['thumbnails']['high']['url']
+    )
+    await set_value(data['id'], channel.json())
+    return channel
+
+
+async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
+    data = await get_videos_by_channel_id(channel_id, next_page_token, limit)
+    if not data:
+        logger.error("Vídeos não encontrados.")
+        raise ValueError("Vídeos não encontrados.")
+    if not 'items' in data and len(data['items']) <= 0:
+        logger.error("Vídeos não encontrados.")
+        raise ValueError("Vídeos não encontrados.")
+    data = data['items']
+    videos = []
+    for item in data:
+        video = Video(
+            id=item['id'],
+            etag=item['etag'],
+            url=f"https://www.youtube.com/watch?v={item['id']}",
+            title=item['snippet']['title'],
+            thumbnail=item['snippet']['thumbnails']['high']['url'],
+            description=item['snippet']['description'],
+            published_at=item['snippet']['publishedAt'],
+            channel_id=channel_id,
+            channel_title=item['snippet']['channelTitle']
+        )
+        videos.append(video)
