@@ -3,7 +3,7 @@ import re
 from app.domain.model import Channel, Video
 from app.infra.cache import get_value, set_value
 import json 
-from app.infra.youtube_api import get_channel_id_by_custom_url, get_videos_by_channel_id
+from app.infra.youtube_api import fetch_channel, fetch_video
 
 async def get_channel_info(custom_url: str) -> Channel:
     if not re.match(r"https:\/\/www\.youtube\.com\/@\w+", custom_url):
@@ -11,11 +11,12 @@ async def get_channel_info(custom_url: str) -> Channel:
         raise ValueError("URL no formato inválida.")
     
     url_split = custom_url.split('@')[1]
-    cached_channel = await get_value(url_split)
+    cached_channel = await get_value(url_split, 'channel')
+
     if cached_channel:
         return Channel(**json.loads(cached_channel))
 
-    data = await get_channel_id_by_custom_url(url_split)
+    data = await fetch_channel(url_split)
     if not data:
         logger.error("Canal não encontrado.")
         raise ValueError("Canal não encontrado.")
@@ -36,12 +37,13 @@ async def get_channel_info(custom_url: str) -> Channel:
         published_at=data['snippet']['publishedAt'],
         thumbnail=data['snippet']['thumbnails']['high']['url']
     )
-    await set_value(data['id'], channel.json())
+    await set_value(data['id'], channel.json(), 'channel')
+    logger.info("Canal encontrado")
     return channel
 
 
 async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
-    data = await get_videos_by_channel_id(channel_id, next_page_token, limit)
+    data = await fetch_video(channel_id, next_page_token, limit)
     if not data:
         logger.error("Vídeos não encontrados.")
         raise ValueError("Vídeos não encontrados.")
@@ -63,3 +65,4 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
             channel_title=item['snippet']['channelTitle']
         )
         videos.append(video)
+    return videos

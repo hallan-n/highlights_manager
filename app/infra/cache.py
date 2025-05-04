@@ -1,9 +1,23 @@
 from redis.asyncio import Redis
-from app.infra.logger import logger
+from infra.logger import logger
+from consts import REDIS_HOST, REDIS_PORT, REDIS_DB
 
-r = Redis(host='0.0.0.0', port=6379, db=0, decode_responses=True, encoding='utf-8')
 
-async def set_value(key, value, expiration=None):
+def get_redis(db: str):
+    if db in REDIS_DB:
+        return Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            db=REDIS_DB[db],
+            decode_responses=True,
+            encoding='utf-8'
+        )
+    else:
+        logger.error(f"Banco de dados Redis inválido: {db}")
+        raise ValueError(f"Banco de dados Redis inválido: {db}")
+
+async def set_value(key: str, value: str, db: str, expiration=None):
+    r = get_redis(db)
     try:
         if expiration:
             await r.set(key, value, ex=expiration)
@@ -14,7 +28,8 @@ async def set_value(key, value, expiration=None):
         logger.error(f"Erro ao definir valor no Redis: {e}")
         return False
 
-async def get_value(key):
+async def get_value(key: str, db: str):
+    r = get_redis(db)
     try:
         value = await r.get(key)
         if value is None:
@@ -26,7 +41,8 @@ async def get_value(key):
         logger.error(f"Erro ao obter valor do Redis: {e}")
         return None
 
-async def delete_key(key):
+async def delete_key(key: str, db: str):
+    r = get_redis(db)
     try:
         await r.delete(key)
         logger.info("Chave excluída do Redis com sucesso.")
