@@ -1,6 +1,7 @@
 from infra.logger import logger
 import re
 from domain.model import Channel, Video
+from domain.parser import parse_channel, parse_video
 from infra.cache import get_value, set_value, get_by_prefix
 import json 
 from infra.youtube_api import fetch_channel, fetch_video
@@ -14,7 +15,7 @@ async def get_channel_info(custom_url: str) -> Channel:
     cached_channel = await get_value(url_split, 'channel')
 
     if cached_channel:
-        return Channel(**json.loads(cached_channel))
+        return parse_channel(cached_channel)
 
     data = await fetch_channel(url_split)
     if not data:
@@ -50,22 +51,28 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
         logger.error("Vídeos não encontrados.")
         raise ValueError("Vídeos não encontrados.")
     data = data['items']
-    
-    cached_videos_raw = await get_by_prefix(channel_id, 'video')
-    cached_videos = [Video(**json.loads(video)) for video in cached_videos_raw]
-    
     videos = []
-    for item in data:
-        video = Video(
-            id=item['id'],
-            etag=item['etag'],
-            url=f"https://www.youtube.com/watch?v={item['id']}",
-            title=item['snippet']['title'],
-            thumbnail=item['snippet']['thumbnails']['high']['url'],
-            description=item['snippet']['description'],
-            published_at=item['snippet']['publishedAt'],
-            channel_id=channel_id,
-            channel_title=item['snippet']['channelTitle']
-        )
-        videos.append(video)
-    return videos
+
+    cached_videos_raw = await get_by_prefix(channel_id, 'video')
+    cached_videos = parse_video(cached_videos_raw)
+
+    """
+        Verficiar se os vídeos retornado pela API
+        já estão no cache, se sim, exluir da var data
+        os que forem novos, faça append em data e
+        retorne.
+    """
+    # for item in data:
+    #     video = Video(
+    #         id=item['id'],
+    #         etag=item['etag'],
+    #         url=f"https://www.youtube.com/watch?v={item['id']}",
+    #         title=item['snippet']['title'],
+    #         thumbnail=item['snippet']['thumbnails']['high']['url'],
+    #         description=item['snippet']['description'],
+    #         published_at=item['snippet']['publishedAt'],
+    #         channel_id=channel_id,
+    #         channel_title=item['snippet']['channelTitle']
+    #     )
+    #     videos.append(video)
+    # return videos
