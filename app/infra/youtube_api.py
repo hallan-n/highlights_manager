@@ -1,6 +1,6 @@
 import httpx
 from consts import API_KEY, BASE_URL
-from app.infra.logger import logger
+from infra.logger import logger
 from typing import Union
 
 async def fetch_channel(custom_id: str) -> Union[dict, None]:
@@ -12,10 +12,8 @@ async def fetch_channel(custom_id: str) -> Union[dict, None]:
         }
         response = await client.get(f"{BASE_URL}/channels", params=params)
         if response.status_code == 200:
-            logger.info('Canal encontrado')
             return response.json()
         else:
-            logger.error(f"Erro ao buscar canal: {response.status_code}")
             return None
 
 async def fetch_video(channel_id, next_page_token=None, limit=5) -> Union[dict, None]:        
@@ -31,8 +29,7 @@ async def fetch_video(channel_id, next_page_token=None, limit=5) -> Union[dict, 
         if next_page_token:
             params['pageToken'] = next_page_token
         
-        response = await client.get(f"{BASE_URL}/videos", params=params)
-
+        response = await client.get(f"{BASE_URL}/search", params=params)
         if response.status_code == 200:
             logger.info('Vídeos encontrados')
             return response.json()

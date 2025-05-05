@@ -1,9 +1,9 @@
-from app.infra.logger import logger
+from infra.logger import logger
 import re
-from app.domain.model import Channel, Video
-from app.infra.cache import get_value, set_value
+from domain.model import Channel, Video
+from infra.cache import get_value, set_value, get_by_prefix
 import json 
-from app.infra.youtube_api import fetch_channel, fetch_video
+from infra.youtube_api import fetch_channel, fetch_video
 
 async def get_channel_info(custom_url: str) -> Channel:
     if not re.match(r"https:\/\/www\.youtube\.com\/@\w+", custom_url):
@@ -37,12 +37,13 @@ async def get_channel_info(custom_url: str) -> Channel:
         published_at=data['snippet']['publishedAt'],
         thumbnail=data['snippet']['thumbnails']['high']['url']
     )
-    await set_value(data['id'], channel.json(), 'channel')
-    logger.info("Canal encontrado")
+    await set_value(url_split, channel.json(), 'channel')
     return channel
 
 
 async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
+
+
     data = await fetch_video(channel_id, next_page_token, limit)
     if not data:
         logger.error("Vídeos não encontrados.")
