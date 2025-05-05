@@ -42,8 +42,6 @@ async def get_channel_info(custom_url: str) -> Channel:
 
 
 async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
-
-
     data = await fetch_video(channel_id, next_page_token, limit)
     if not data:
         logger.error("Vídeos não encontrados.")
@@ -52,6 +50,10 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
         logger.error("Vídeos não encontrados.")
         raise ValueError("Vídeos não encontrados.")
     data = data['items']
+    
+    cached_videos_raw = await get_by_prefix(channel_id, 'video')
+    cached_videos = [Video(**json.loads(video)) for video in cached_videos_raw]
+    
     videos = []
     for item in data:
         video = Video(
