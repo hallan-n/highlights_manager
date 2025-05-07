@@ -49,6 +49,16 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
         raise ValueError("Vídeos não encontrados.")
     data = data['items']
 
+    videos_cached = await get_by_prefix(channel_id, 'video')
+
+    if videos_cached:
+        video_ids = {video.id for video in videos_cached}
+        data = [item for item in data if item['id']['videoId'] not in video_ids]
+
+    if not data:
+        logger.info("Nenhum vídeo novo encontrado.")
+        return []
+    
     published_cached = await get_by_prefix(channel_id, 'published')
 
     if published_cached:
@@ -57,15 +67,6 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
 
     if not data:
         logger.info("Videos já publicados.")
-        return []
-
-    videos_cached = await get_by_prefix(channel_id, 'video')
-    if videos_cached:
-        video_ids = {video.id for video in videos_cached}
-        data = [item for item in data if item['id']['videoId'] not in video_ids]
-
-    if not data:
-        logger.info("Nenhum vídeo novo encontrado.")
         return []
 
     videos = []
