@@ -51,10 +51,14 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
         logger.error("Vídeos não encontrados.")
         raise ValueError("Vídeos não encontrados.")
     data = data['items']
-    videos = []
 
-    cached_videos_raw = await get_by_prefix(channel_id, 'video')
-    cached_videos = parse_video(cached_videos_raw)
+    published_videos_raw = await get_by_prefix(channel_id, 'published')
+    published_videos = parse_video(published_videos_raw)
+    for video in published_videos:
+        for item in data:
+            if video.id == item['id']:
+                data.remove(item)
+                break
 
     """
         Verficiar se os vídeos retornado pela API

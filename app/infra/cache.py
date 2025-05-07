@@ -1,6 +1,8 @@
 from redis.asyncio import Redis
 from infra.logger import logger
 from consts import REDIS_HOST, REDIS_PORT, REDIS_DB
+from domain.model import Channel, Video
+import json
 
 
 def _get_redis(db: str):
@@ -15,8 +17,20 @@ def _get_redis(db: str):
     else:
         logger.error(f"Banco de dados Redis inválido: {db}")
         raise ValueError(f"Banco de dados Redis inválido: {db}")
+    
+def _get_model(db: str) -> Channel | Video:
+    match db:
+        case 'channel':
+            return Channel
+        case 'video':
+            return Video
+        case 'published':
+            return Video
+        case _:
+            logger.error(f"Banco de dados Redis inválido: {db}")
+            raise ValueError(f"Banco de dados Redis inválido: {db}") 
 
-async def set_value(key: str, value: str, db: str, expiration=None):
+async def set_value(key: str, value: str, db: str, expiration=None) -> bool:
     r = _get_redis(db)
     try:
         if expiration:
@@ -28,20 +42,22 @@ async def set_value(key: str, value: str, db: str, expiration=None):
         logger.error(f"Erro ao definir valor no Redis: {e}")
         return False
 
-async def get_value(key: str, db: str):
+
+async def get_value(key: str, db: str) -> Channel | Video | None:
     r = _get_redis(db)
+    Model = _get_model(db)
     try:
         value = await r.get(key)
         if value is None:
             logger.info("Chave não encontrada no Redis.")
             return None
         logger.info("Valor obtido do Redis com sucesso.")
-        return value
+        return Model(**json.loads(value))
     except Exception as e:
         logger.error(f"Erro ao obter valor do Redis: {e}")
         return None
 
-async def delete_key(key: str, db: str):
+async def delete_key(key: str, db: str) -> bool:
     r = _get_redis(db)
     try:
         await r.delete(key)
@@ -51,8 +67,9 @@ async def delete_key(key: str, db: str):
         logger.error(f"Erro ao excluir chave do Redis: {e}")
         return False
     
-async def get_by_prefix(pre: str, db: str):
+async def get_by_prefix(pre: str, db: str) -> list[Channel | Video] | None:
     r = _get_redis(db)
+    Model = _get_model(db)
     try:
         keys = [chave async for chave in r.scan_iter(f"{pre}*")]
         values = await r.mget(keys)
@@ -60,7 +77,7 @@ async def get_by_prefix(pre: str, db: str):
             logger.info("Nenhum valor encontrado com o prefixo fornecido.")
             return None
         logger.info("Valores obtidos do Redis com sucesso.")
-        return values
+        return [Model(**json.loads(item)) for item in values]
     except Exception as e:
         logger.error(f"Erro ao obter valores do Redis: {e}")
         return None

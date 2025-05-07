@@ -1,9 +1,10 @@
 import httpx
+import asyncio
+from domain.model import Video
 from consts import API_KEY, BASE_URL
 from infra.logger import logger
-from typing import Union
 
-async def fetch_channel(custom_id: str) -> Union[dict, None]:
+async def fetch_channel(custom_id: str) -> dict | None:
     async with httpx.AsyncClient() as client:
         params = {
             'part': 'snippet',
@@ -16,7 +17,7 @@ async def fetch_channel(custom_id: str) -> Union[dict, None]:
         else:
             return None
 
-async def fetch_video(channel_id, next_page_token=None, limit=5) -> Union[dict, None]:        
+async def fetch_video(channel_id, next_page_token=None, limit=5) -> dict | None:        
     async with httpx.AsyncClient() as client:
         params = {
             'part': 'snippet',
@@ -36,3 +37,7 @@ async def fetch_video(channel_id, next_page_token=None, limit=5) -> Union[dict, 
         else:
             logger.error(f"Erro ao buscar vídeos: {response.status_code}")
             return None
+
+async def publish_video(video: Video) -> bool:
+    await asyncio.sleep(1)
+    return True
