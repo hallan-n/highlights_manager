@@ -86,3 +86,12 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
         key = channel_id + video.id
         await set_value(key, video.json(), 'video')
     return videos
+
+async def publish_video(channel_id, video_id):
+    key = channel_id + video_id
+    video = await get_value(key, 'video')
+    if not video:
+        logger.error("Vídeo não encontrado.")
+        raise ValueError("Vídeo não encontrado.")
+    await set_value(key, video.json(), 'published')
+    return video
