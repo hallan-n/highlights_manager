@@ -32,3 +32,11 @@ class Video(Base):
     published_at: str
     channel_id: str
     channel_title: str
+
+@dataclass
+class Login(Base):
+    state: dict
+    cookies: dict
+    local_storage: dict
+    session_storage: dict
+    expire_at: str
