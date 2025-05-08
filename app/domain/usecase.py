@@ -1,10 +1,10 @@
 from infra.logger import logger
 import re
 from datetime import datetime
-from domain.model import Channel, Video
+from domain.model import Channel, Video, Login
 from infra.cache import get_value, set_value, get_by_prefix, delete_key
 from external.youtube_api import fetch_channel, fetch_video
-from external.youtube_webbot import get_login_session
+from external.youtube_webbot import get_login_session, get_session_page
 
 
 async def get_channel_info(custom_url: str) -> Channel:
@@ -90,7 +90,7 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
         await set_value(key, video.json(), 'video')
     return videos
 
-async def publish_video():
+async def _get_login() -> Login:
     login_session_cached = await get_value('youtube', 'login')
     if login_session_cached:
         expire_at = datetime.fromisoformat(login_session_cached.expire_at)
@@ -106,5 +106,34 @@ async def publish_video():
         raise ValueError("Erro ao realizar login.")
     
     await set_value('youtube', login_session.json(), 'login')
+    return login_session
 
+
+async def publish_video():
+    login = await _get_login()
     
+    if not login:
+        logger.error("Erro ao obter sessão de login.")
+        raise ValueError("Erro ao obter sessão de login.")
+    
+    if not login.state:
+        logger.error("Erro ao obter estado de armazenamento.")
+        raise ValueError("Erro ao obter estado de armazenamento.")
+
+    if not login.cookies:
+        logger.error("Erro ao obter cookies.")
+        raise ValueError("Erro ao obter cookies.")
+    
+    if not login.local_storage:
+        logger.error("Erro ao obter armazenamento local.")
+        raise ValueError("Erro ao obter armazenamento local.")
+    
+    if not login.session_storage:
+        logger.error("Erro ao obter armazenamento de sessão.")
+        raise ValueError("Erro ao obter armazenamento de sessão.")
+
+    page = await get_session_page(login)
+
+    if not page:
+        logger.error("Erro ao obter página de sessão.")
+        raise ValueError("Erro ao obter página de sessão.")

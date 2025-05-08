@@ -1,23 +1,29 @@
 
 from datetime import datetime, timedelta
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, Page
 from domain.model import Login
+from infra.logger import logger
 from consts import YOUTUBE_LOGIN, YOUTUBE_PASSWORD, YOUTUBE_EXPIRE_SESSION
 import json
 
-async def get_login_session():
+async def get_login_session() -> Login | None:
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
-        await page.goto("https://www.youtube.com/signin")
-        await page.wait_for_selector('input[type="email"]')
-        await page.fill('input[type="email"]', YOUTUBE_LOGIN)
-        await page.click('button:has-text("Next")')
-        await page.wait_for_selector('input[type="password"]', timeout=15000)
-        await page.fill('input[type="password"]', YOUTUBE_PASSWORD)
-        await page.click('button:has-text("Next")')
-        await page.wait_for_url("https://www.youtube.com/*", timeout=20000)
+
+        try:
+            await page.goto("https://www.youtube.com/signin")
+            await page.wait_for_selector('input[type="email"]')
+            await page.fill('input[type="email"]', YOUTUBE_LOGIN)
+            await page.click('button:has-text("Next")')
+            await page.wait_for_selector('input[type="password"]', timeout=15000)
+            await page.fill('input[type="password"]', YOUTUBE_PASSWORD)
+            await page.click('button:has-text("Next")')
+            await page.wait_for_url("https://www.youtube.com/*", timeout=20000)
+        except Exception as e:
+            await browser.close()
+            return None
 
         state = await context.storage_state()
         cookies = await context.cookies()
@@ -34,3 +40,36 @@ async def get_login_session():
         )
         await browser.close()
         return login
+
+async def get_session_page(login: Login) -> Page:
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context(storage_state=login.state)
+
+        page = await context.new_page()
+        await page.goto("https://www.youtube.com/")
+
+        try:
+            await page.add_init_script(
+                f"""() => {{
+                    const data = {json.dumps(login.local_storage)};
+                    for (const [key, value] of Object.entries(data)) {{
+                        localStorage.setItem(key, value);
+                    }}
+                }}"""
+            )
+
+            await page.add_init_script(
+                f"""() => {{
+                    const data = {json.dumps(login.session_storage)};
+                    for (const [key, value] of Object.entries(data)) {{
+                        sessionStorage.setItem(key, value);
+                    }}
+                }}"""
+            )
+        except Exception as e:
+            await browser.close()
+            return None
+
+        await page.reload()
+        return page

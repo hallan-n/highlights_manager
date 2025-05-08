@@ -1,5 +1,6 @@
-from external.youtube_webbot import get_login_session
+from domain.usecase import get_video_by_channel_id, get_channel_info
 import asyncio
 
-valor = asyncio.run(get_login_session())
-print(valor)
+# data = asyncio.run(get_channel_info('https://www.youtube.com/@MBLiveTV'))
+data = asyncio.run(get_video_by_channel_id('UCZYyHef3eBoBEztAOY'))
+print(data)
