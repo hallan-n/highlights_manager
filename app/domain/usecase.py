@@ -1,8 +1,11 @@
 from infra.logger import logger
 import re
+from datetime import datetime
 from domain.model import Channel, Video
-from infra.cache import get_value, set_value, get_by_prefix
-from infra.youtube_api import fetch_channel, fetch_video
+from infra.cache import get_value, set_value, get_by_prefix, delete_key
+from external.youtube_api import fetch_channel, fetch_video
+from external.youtube_webbot import get_login_session
+
 
 async def get_channel_info(custom_url: str) -> Channel:
     if not re.match(r"https:\/\/www\.youtube\.com\/@\w+", custom_url):
@@ -87,11 +90,21 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
         await set_value(key, video.json(), 'video')
     return videos
 
-async def publish_video(channel_id, video_id):
-    key = channel_id + video_id
-    video = await get_value(key, 'video')
-    if not video:
-        logger.error("Vídeo não encontrado.")
-        raise ValueError("Vídeo não encontrado.")
-    await set_value(key, video.json(), 'published')
-    return video
+async def publish_video():
+    login_session_cached = await get_value('youtube', 'login')
+    if login_session_cached:
+        expire_at = datetime.fromisoformat(login_session_cached.expire_at)
+        if expire_at > datetime.now():
+            return login_session_cached
+        else:
+            logger.info("Login expirado, realizando novo login.")
+            await delete_key('youtube', 'login')
+    
+    login_session = await get_login_session()
+    if not login_session:
+        logger.error("Erro ao realizar login.")
+        raise ValueError("Erro ao realizar login.")
+    
+    await set_value('youtube', login_session.json(), 'login')
+
+    

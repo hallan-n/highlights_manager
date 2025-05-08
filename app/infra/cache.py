@@ -1,7 +1,7 @@
 from redis.asyncio import Redis
 from infra.logger import logger
 from consts import REDIS_HOST, REDIS_PORT, REDIS_DB
-from domain.model import Channel, Video
+from domain.model import Channel, Video, Login
 import json
 
 
@@ -18,7 +18,7 @@ def _get_redis(db: str):
         logger.error(f"Banco de dados Redis inválido: {db}")
         raise ValueError(f"Banco de dados Redis inválido: {db}")
     
-def _get_model(db: str) -> Channel | Video:
+def _get_model(db: str) -> Channel | Video | Login:
     match db:
         case 'channel':
             return Channel
@@ -26,6 +26,8 @@ def _get_model(db: str) -> Channel | Video:
             return Video
         case 'published':
             return Video
+        case 'login':
+            return Login
         case _:
             logger.error(f"Banco de dados Redis inválido: {db}")
             raise ValueError(f"Banco de dados Redis inválido: {db}") 
@@ -43,7 +45,7 @@ async def set_value(key: str, value: str, db: str, expiration=None) -> bool:
         return False
 
 
-async def get_value(key: str, db: str) -> Channel | Video | None:
+async def get_value(key: str, db: str) -> Channel | Video | Login | None:
     r = _get_redis(db)
     Model = _get_model(db)
     try:
@@ -67,7 +69,7 @@ async def delete_key(key: str, db: str) -> bool:
         logger.error(f"Erro ao excluir chave do Redis: {e}")
         return False
     
-async def get_by_prefix(pre: str, db: str) -> list[Channel | Video] | None:
+async def get_by_prefix(pre: str, db: str) -> list[Channel | Video | Login] | None:
     r = _get_redis(db)
     Model = _get_model(db)
     try:

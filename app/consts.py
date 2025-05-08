@@ -8,6 +8,7 @@ REDIS_HOST=os.environ.get('REDIS_HOST', '0.0.0.0')
 REDIS_PORT=int(os.environ.get('REDIS_PORT', '6379'))
 YOUTUBE_LOGIN=os.environ.get('YOUTUBE_LOGIN', 'login-teste')
 YOUTUBE_PASSWORD=os.environ.get('YOUTUBE_PASSWORD', 'pwd-teste')
+YOUTUBE_EXPIRE_SESSION = 7
 REDIS_DB = {
     'channel': 0,
     'video': 1,
