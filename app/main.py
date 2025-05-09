@@ -1,6 +1,5 @@
-from domain.usecase import publish_video
+from external.youtube_downloader import donwload_video, download_thumbnail
 import asyncio
 
-# data = asyncio.run(get_channel_info('https://www.youtube.com/@MBLiveTV'))
-data = asyncio.run(publish_video())
-print(data)
+asyncio.run(download_thumbnail('asdasd','https://i.ytimg.com/vi/8YTNbIgswmQ/hqdefault_live.jpg'))
+donwload_video('asdasd', 'https://www.youtube.com/watch?v=t0Hk3fNpbjA')

@@ -17,3 +17,6 @@ REDIS_DB = {
 }
 BASE_URL='https://www.googleapis.com/youtube/v3'
 YOUTUBE_VIDEO_BASE_URL='https://www.youtube.com/watch?v='
+DOWNLOAD_TEMP_DIR='app/infra/temp'
+VIDEO_EXTENSION='mp4'
+THUMB_EXTENSION='jpeg'
