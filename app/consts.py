@@ -20,3 +20,11 @@ YOUTUBE_VIDEO_BASE_URL='https://www.youtube.com/watch?v='
 DOWNLOAD_TEMP_DIR='app/infra/temp'
 VIDEO_EXTENSION='mp4'
 THUMB_EXTENSION='jpeg'
+START_CHANNELS = [
+    'https://www.youtube.com/@cortesdoflow',
+    'https://www.youtube.com/@cortesdointeligencia',
+    'https://www.youtube.com/@CortesdoVenusOficial',
+    'https://www.youtube.com/@cortespoddelasoficial',
+    'https://www.youtube.com/@cortespoccastoficial',
+    'https://www.youtube.com/@cortesredcastoficial2694'
+]
