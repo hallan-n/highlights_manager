@@ -1,7 +1,7 @@
 
 from datetime import datetime, timedelta
 from playwright.async_api import async_playwright, Page
-from domain.model import Login
+from domain.model import Login, Video
 from infra.logger import logger
 from consts import YOUTUBE_LOGIN, YOUTUBE_PASSWORD, YOUTUBE_EXPIRE_SESSION
 import json
@@ -41,7 +41,26 @@ async def get_login_session() -> Login | None:
         await browser.close()
         return login
 
-async def get_session_page(login: Login) -> Page:
+async def _inject_session(page: Page, login: Login):
+    await page.add_init_script(
+        f"""() => {{
+            const data = {json.dumps(login.local_storage)};
+            for (const [key, value] of Object.entries(data)) {{
+                localStorage.setItem(key, value);
+            }}
+        }}"""
+    )
+
+    await page.add_init_script(
+        f"""() => {{
+            const data = {json.dumps(login.session_storage)};
+            for (const [key, value] of Object.entries(data)) {{
+                sessionStorage.setItem(key, value);
+            }}
+        }}"""
+    )
+    
+async def upload_video(login: Login, Video: Video) -> Page:
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
         context = await browser.new_context(storage_state=login.state)
@@ -50,26 +69,30 @@ async def get_session_page(login: Login) -> Page:
         await page.goto("https://www.youtube.com/")
 
         try:
-            await page.add_init_script(
-                f"""() => {{
-                    const data = {json.dumps(login.local_storage)};
-                    for (const [key, value] of Object.entries(data)) {{
-                        localStorage.setItem(key, value);
-                    }}
-                }}"""
-            )
-
-            await page.add_init_script(
-                f"""() => {{
-                    const data = {json.dumps(login.session_storage)};
-                    for (const [key, value] of Object.entries(data)) {{
-                        sessionStorage.setItem(key, value);
-                    }}
-                }}"""
-            )
-        except Exception as e:
+            await _inject_session(page, login)
+            logger.info("Sessão injetada com sucesso.")
+        except:
+            logger.error(f"Erro ao injetar sessão")
             await browser.close()
             return None
 
-        await page.reload()
+        await page.goto('https://studio.youtube.com/channel/UCfTwUDrhiUWUg9Oy4b-8Oww')
+
+        await page.click('[test-id="upload-icon-url"]')
+
+
+        input_handle = await page.evaluate_handle("""
+        () => {
+        const input = document.querySelector('input[type="file"]');
+        if (input) {
+            input.style.display = 'block';
+            input.removeAttribute('aria-hidden');
+            input.removeAttribute('tabindex');
+        }
+        return input;
+        }
+        """)
+
+        await input_handle.as_element().set_input_files("app/infra/storage/video/video.mp4")
+
         return page

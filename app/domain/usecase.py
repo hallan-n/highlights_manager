@@ -4,7 +4,7 @@ from datetime import datetime
 from domain.model import Channel, Video, Login
 from infra.cache import get_value, set_value, get_by_prefix, delete_key
 from external.youtube_api import fetch_channel, fetch_video
-from external.youtube_webbot import get_login_session, get_session_page
+from external.youtube_webbot import get_login_session, upload_video
 
 
 async def get_channel_info(custom_url: str) -> Channel:
@@ -132,8 +132,9 @@ async def publish_video():
         logger.error("Erro ao obter armazenamento de sessão.")
         raise ValueError("Erro ao obter armazenamento de sessão.")
 
-    page = await get_session_page(login)
-
-    if not page:
-        logger.error("Erro ao obter página de sessão.")
-        raise ValueError("Erro ao obter página de sessão.")
+    try:
+        result = await upload_video(login, None)
+    except Exception as e:
+        logger.error(f"Erro ao fazer upload do vídeo: {e}")
+        raise ValueError("Erro ao fazer upload do vídeo.")
+    
