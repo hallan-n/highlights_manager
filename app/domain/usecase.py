@@ -1,5 +1,6 @@
 from infra.logger import logger
 import re
+import os
 from datetime import datetime
 from domain.model import Channel, Video, Login
 from infra.cache import get_value, set_value, get_by_prefix, delete_key
@@ -44,7 +45,7 @@ async def get_channel_info(custom_url: str) -> Channel:
     await set_value(url_split, channel.json(), 'channel')
     return channel
 
-async def get_video_by_channel_id(channel_id, limit=5):
+async def get_video_by_channel_id(channel_id, limit=5) -> list[Video]:
     data = await fetch_video(channel_id, limit)
     if not data:
         logger.error("Vídeos não encontrados.")
@@ -86,8 +87,8 @@ async def get_video_by_channel_id(channel_id, limit=5):
             published_at=item['snippet']['publishedAt'],
             channel_id=channel_id,
             channel_title=item['snippet']['channelTitle'],
-            thumb_path=f'{DOWNLOAD_TEMP_DIR}/{item['id']['videoId']}.{THUMB_EXTENSION}',
-            video_path=f'{DOWNLOAD_TEMP_DIR}/{item['id']['videoId']}.{VIDEO_EXTENSION}'
+            thumb_path=None,
+            video_path=None
         )
         videos.append(video)
         key = channel_id + video.id
@@ -112,7 +113,9 @@ async def _get_login() -> Login:
     await set_value('youtube', login_session.json(), 'login')
     return login_session
 
-async def dl_video_and_thumb(video: Video):
+async def dl_video_and_thumb(video: Video) -> Video:
+    os.makedirs(DOWNLOAD_TEMP_DIR, exist_ok=True)
+
     is_videodl = donwload_video(video.id, video.url)
     if not is_videodl:
         logger.error('Erro ao baixar video.')
@@ -124,10 +127,23 @@ async def dl_video_and_thumb(video: Video):
     if not is_thumbdl:
         logger.error('Erro ao baixar thumbnail')
         raise ValueError('Erro ao baixar thumbnail')
-
+    video.thumb_path
+    
     logger.info('Thumbnail baixada com sucesso!')
+    video.thumb_path=f'{DOWNLOAD_TEMP_DIR}/{video.id}.{THUMB_EXTENSION}'
+    video.video_path=f'{DOWNLOAD_TEMP_DIR}/{video.id}.{VIDEO_EXTENSION}'
+
+    return video
 
 async def publish_video(video: Video):
+    if not video.thumb_path or video.video_path:
+        logger.error('Os arquivos deThumbnail e Vídeo não foram encontrados.')
+        raise ValueError('Os arquivos deThumbnail e Vídeo não foram encontrados.')
+
+    if not any(os.scandir(DOWNLOAD_TEMP_DIR)):
+        logger.error('Os arquivos deThumbnail e Vídeo não foram encontrados.')
+        raise ValueError('Os arquivos deThumbnail e Vídeo não foram encontrados.')
+
     login = await _get_login()
     
     if not login:
