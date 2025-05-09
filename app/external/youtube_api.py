@@ -15,7 +15,7 @@ async def fetch_channel(custom_id: str) -> dict | None:
         else:
             return None
 
-async def fetch_video(channel_id, next_page_token=None, limit=5) -> dict | None:        
+async def fetch_video(channel_id, limit=5) -> dict | None:        
     async with httpx.AsyncClient() as client:
         params = {
             'part': 'snippet',
@@ -25,8 +25,6 @@ async def fetch_video(channel_id, next_page_token=None, limit=5) -> dict | None:
             'order': 'date',
             'maxResults': limit
         }
-        if next_page_token:
-            params['pageToken'] = next_page_token
         
         response = await client.get(f"{BASE_URL}/search", params=params)
         if response.status_code == 200:

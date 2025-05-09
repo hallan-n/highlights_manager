@@ -5,6 +5,8 @@ from domain.model import Channel, Video, Login
 from infra.cache import get_value, set_value, get_by_prefix, delete_key
 from external.youtube_api import fetch_channel, fetch_video
 from external.youtube_webbot import get_login_session, upload_video
+from external.youtube_downloader import donwload_video, download_thumbnail
+from consts import DOWNLOAD_TEMP_DIR, VIDEO_EXTENSION, THUMB_EXTENSION
 
 
 async def get_channel_info(custom_url: str) -> Channel:
@@ -42,8 +44,8 @@ async def get_channel_info(custom_url: str) -> Channel:
     await set_value(url_split, channel.json(), 'channel')
     return channel
 
-async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
-    data = await fetch_video(channel_id, next_page_token, limit)
+async def get_video_by_channel_id(channel_id, limit=5):
+    data = await fetch_video(channel_id, limit)
     if not data:
         logger.error("Vídeos não encontrados.")
         raise ValueError("Vídeos não encontrados.")
@@ -83,8 +85,10 @@ async def get_video_by_channel_id(channel_id, next_page_token=None, limit=5):
             description=item['snippet']['description'],
             published_at=item['snippet']['publishedAt'],
             channel_id=channel_id,
-            channel_title=item['snippet']['channelTitle']
-            )
+            channel_title=item['snippet']['channelTitle'],
+            thumb_path=f'{DOWNLOAD_TEMP_DIR}/{item['id']['videoId']}.{THUMB_EXTENSION}',
+            video_path=f'{DOWNLOAD_TEMP_DIR}/{item['id']['videoId']}.{VIDEO_EXTENSION}'
+        )
         videos.append(video)
         key = channel_id + video.id
         await set_value(key, video.json(), 'video')
@@ -108,8 +112,22 @@ async def _get_login() -> Login:
     await set_value('youtube', login_session.json(), 'login')
     return login_session
 
+async def dl_video_and_thumb(video: Video):
+    is_videodl = donwload_video(video.id, video.url)
+    if not is_videodl:
+        logger.error('Erro ao baixar video.')
+        raise ValueError('Erro ao baixar vídeo')
 
-async def publish_video():
+    logger.info('Vídeo baixado com sucesso!')
+    
+    is_thumbdl = await download_thumbnail(video.id, video.thumbnail)
+    if not is_thumbdl:
+        logger.error('Erro ao baixar thumbnail')
+        raise ValueError('Erro ao baixar thumbnail')
+
+    logger.info('Thumbnail baixada com sucesso!')
+
+async def publish_video(video: Video):
     login = await _get_login()
     
     if not login:

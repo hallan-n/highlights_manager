@@ -32,6 +32,8 @@ class Video(Base):
     published_at: str
     channel_id: str
     channel_title: str
+    video_path: str
+    thumb_path: str
 
 @dataclass
 class Login(Base):

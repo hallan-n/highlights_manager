@@ -2,7 +2,6 @@
 import yt_dlp
 from consts import DOWNLOAD_TEMP_DIR, VIDEO_EXTENSION, THUMB_EXTENSION
 import httpx
-from infra.logger import logger
 
 def donwload_video(video_id: str, url: str) -> bool:
     output_path = f'{DOWNLOAD_TEMP_DIR}/{video_id}.%(ext)s'
@@ -15,10 +14,8 @@ def donwload_video(video_id: str, url: str) -> bool:
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
-        logger.info('Vídeo baixado com sucesso!')
         return True
-    except Exception as e:
-        logger.error(f'Erro ao baixar thumbnail: {e}')
+    except:
         return False
 
 
@@ -31,9 +28,6 @@ async def download_thumbnail(video_id: str, url: str) -> bool:
         if response.status_code == 200:
             with open(full_path, 'wb') as f:
                 f.write(response.content)
-
-            logger.info('Thumbnail baixada com sucesso!')
             return True
         else:
-            logger.error(f'Erro ao baixar thumbnail: {response.status_code}')
             return False
