@@ -1,8 +1,9 @@
-from redis.asyncio import Redis
-from infra.logger import logger
-from consts import REDIS_HOST, REDIS_PORT, REDIS_DB
-from domain.model import Channel, Video, Login
 import json
+
+from consts import REDIS_DB, REDIS_HOST, REDIS_PORT
+from domain.model import Channel, Login, Video
+from infra.logger import logger
+from redis.asyncio import Redis
 
 
 def _get_redis(db: str):
@@ -12,25 +13,27 @@ def _get_redis(db: str):
             port=REDIS_PORT,
             db=REDIS_DB[db],
             decode_responses=True,
-            encoding='utf-8'
+            encoding="utf-8",
         )
     else:
         logger.error(f"Banco de dados Redis inválido: {db}")
         raise ValueError(f"Banco de dados Redis inválido: {db}")
-    
+
+
 def _get_model(db: str) -> Channel | Video | Login:
     match db:
-        case 'channel':
+        case "channel":
             return Channel
-        case 'video':
+        case "video":
             return Video
-        case 'published':
+        case "published":
             return Video
-        case 'login':
+        case "login":
             return Login
         case _:
             logger.error(f"Banco de dados Redis inválido: {db}")
-            raise ValueError(f"Banco de dados Redis inválido: {db}") 
+            raise ValueError(f"Banco de dados Redis inválido: {db}")
+
 
 async def set_value(key: str, value: str, db: str, expiration=None) -> bool:
     r = _get_redis(db)
@@ -59,6 +62,7 @@ async def get_value(key: str, db: str) -> Channel | Video | Login | None:
         logger.error(f"Erro ao obter valor do Redis: {e}")
         return None
 
+
 async def delete_key(key: str, db: str) -> bool:
     r = _get_redis(db)
     try:
@@ -68,7 +72,8 @@ async def delete_key(key: str, db: str) -> bool:
     except Exception as e:
         logger.error(f"Erro ao excluir chave do Redis: {e}")
         return False
-    
+
+
 async def get_by_prefix(pre: str, db: str) -> list[Channel | Video | Login] | None:
     r = _get_redis(db)
     Model = _get_model(db)

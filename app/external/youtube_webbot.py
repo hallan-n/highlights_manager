@@ -1,10 +1,11 @@
-
+import json
 from datetime import datetime, timedelta
-from playwright.async_api import async_playwright, Page
+
+from consts import YOUTUBE_EXPIRE_SESSION, YOUTUBE_LOGIN, YOUTUBE_PASSWORD
 from domain.model import Login, Video
 from infra.logger import logger
-from consts import YOUTUBE_LOGIN, YOUTUBE_PASSWORD, YOUTUBE_EXPIRE_SESSION
-import json
+from playwright.async_api import Page, async_playwright
+
 
 async def get_login_session() -> Login | None:
     async with async_playwright() as p:
@@ -28,7 +29,9 @@ async def get_login_session() -> Login | None:
         state = await context.storage_state()
         cookies = await context.cookies()
         local_storage = await page.evaluate("() => JSON.stringify(window.localStorage)")
-        session_storage = await page.evaluate("() => JSON.stringify(window.sessionStorage)")
+        session_storage = await page.evaluate(
+            "() => JSON.stringify(window.sessionStorage)"
+        )
         expire_at = datetime.now() + timedelta(days=YOUTUBE_EXPIRE_SESSION)
 
         login = Login(
@@ -36,10 +39,11 @@ async def get_login_session() -> Login | None:
             cookies=cookies,
             local_storage=json.loads(local_storage),
             session_storage=json.loads(session_storage),
-            expire_at=expire_at.isoformat()
+            expire_at=expire_at.isoformat(),
         )
         await browser.close()
         return login
+
 
 async def _inject_session(page: Page, login: Login):
     await page.add_init_script(
@@ -59,7 +63,8 @@ async def _inject_session(page: Page, login: Login):
             }}
         }}"""
     )
-    
+
+
 async def upload_video(login: Login, video: Video) -> bool:
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
@@ -76,13 +81,14 @@ async def upload_video(login: Login, video: Video) -> bool:
             await browser.close()
             return None
 
-        await page.goto('https://studio.youtube.com')
+        await page.goto("https://studio.youtube.com")
 
         await page.click('[test-id="upload-icon-url"]')
 
         try:
 
-            input_video = await page.evaluate_handle("""
+            input_video = await page.evaluate_handle(
+                """
             () => {
                 const input = document.querySelector('input[type="file"]');
                 if (input) {
@@ -92,13 +98,15 @@ async def upload_video(login: Login, video: Video) -> bool:
                 }
                 return input;
             }
-            """)
+            """
+            )
             await input_video.as_element().set_input_files(video.video_path)
-            logger.info('Iniciando Upload do Video.')
-            
+            logger.info("Iniciando Upload do Video.")
+
             await page.wait_for_timeout(3000)
 
-            input_thumb = await page.evaluate_handle("""
+            input_thumb = await page.evaluate_handle(
+                """
             () => {
                 const input = document.querySelector('input[type="file"]');
                 if (input){
@@ -108,9 +116,10 @@ async def upload_video(login: Login, video: Video) -> bool:
                 }
                 return input;
             }
-            """)
+            """
+            )
             await input_thumb.as_element().set_input_files(video.thumb_path)
-            logger.info('Iniciando Upload da Thumb.')
+            logger.info("Iniciando Upload da Thumb.")
 
             await page.wait_for_timeout(3000)
 
@@ -129,13 +138,9 @@ async def upload_video(login: Login, video: Video) -> bool:
             await page.click('[name="PUBLIC"]')
             await page.click('button[aria-label="Publicar"]')
 
-            logger.info('Video enviado, aguardando processamento da publicação')
+            logger.info("Video enviado, aguardando processamento da publicação")
             return True
         except:
             logger.error("Erro enviar o video")
             await browser.close()
             return None
-        breakpoint()
-
-
-        

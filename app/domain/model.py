@@ -1,5 +1,6 @@
-from dataclasses import dataclass, asdict
 import json
+from dataclasses import asdict, dataclass
+
 
 @dataclass
 class Base:
@@ -8,6 +9,7 @@ class Base:
 
     def json(self):
         return json.dumps(asdict(self))
+
 
 @dataclass
 class Channel(Base):
@@ -20,6 +22,7 @@ class Channel(Base):
     country: str
     published_at: str
     thumbnail: str
+
 
 @dataclass
 class Video(Base):
@@ -34,6 +37,7 @@ class Video(Base):
     channel_title: str
     video_path: str
     thumb_path: str
+
 
 @dataclass
 class Login(Base):
