@@ -136,6 +136,8 @@ async def dl_video_and_thumb(video: Video) -> Video:
     return video
 
 async def publish_video(video: Video):
+    login = await _get_login()
+    await upload_video(login, None)
     if not video.thumb_path or video.video_path:
         logger.error('Os arquivos deThumbnail e Vídeo não foram encontrados.')
         raise ValueError('Os arquivos deThumbnail e Vídeo não foram encontrados.')

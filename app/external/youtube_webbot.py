@@ -60,7 +60,7 @@ async def _inject_session(page: Page, login: Login):
         }}"""
     )
     
-async def upload_video(login: Login, Video: Video) -> Page:
+async def upload_video(login: Login, video: Video) -> bool:
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
         context = await browser.new_context(storage_state=login.state)
@@ -76,23 +76,66 @@ async def upload_video(login: Login, Video: Video) -> Page:
             await browser.close()
             return None
 
-        await page.goto('https://studio.youtube.com/channel/UCfTwUDrhiUWUg9Oy4b-8Oww')
+        await page.goto('https://studio.youtube.com')
 
         await page.click('[test-id="upload-icon-url"]')
 
+        try:
 
-        input_handle = await page.evaluate_handle("""
-        () => {
-        const input = document.querySelector('input[type="file"]');
-        if (input) {
-            input.style.display = 'block';
-            input.removeAttribute('aria-hidden');
-            input.removeAttribute('tabindex');
-        }
-        return input;
-        }
-        """)
+            input_video = await page.evaluate_handle("""
+            () => {
+                const input = document.querySelector('input[type="file"]');
+                if (input) {
+                    input.style.display = 'block';
+                    input.removeAttribute('aria-hidden');
+                    input.removeAttribute('tabindex');
+                }
+                return input;
+            }
+            """)
+            await input_video.as_element().set_input_files(video.video_path)
+            logger.info('Iniciando Upload do Video.')
+            
+            await page.wait_for_timeout(3000)
 
-        await input_handle.as_element().set_input_files("app/infra/storage/video/video.mp4")
+            input_thumb = await page.evaluate_handle("""
+            () => {
+                const input = document.querySelector('input[type="file"]');
+                if (input){
+                    input.style.display = 'block';
+                    input.removeAttribute('aria-hidden');
+                    input.removeAttribute('tabindex');
+                }
+                return input;
+            }
+            """)
+            await input_thumb.as_element().set_input_files(video.thumb_path)
+            logger.info('Iniciando Upload da Thumb.')
 
-        return page
+            await page.wait_for_timeout(3000)
+
+            title = await page.query_selector('[aria-label^="Adicione um título"]')
+            description = await page.query_selector('[aria-label^="Fale sobre"]')
+
+            await title.fill(video.title)
+            await description.fill(video.description)
+
+            await page.click('[name="VIDEO_MADE_FOR_KIDS_NOT_MFK"]')
+
+            await page.click('button[aria-label="Próximo"]')
+            await page.click('button[aria-label="Próximo"]')
+            await page.click('button[aria-label="Próximo"]')
+
+            await page.click('[name="PUBLIC"]')
+            await page.click('button[aria-label="Publicar"]')
+
+            logger.info('Video enviado, aguardando processamento da publicação')
+            return True
+        except:
+            logger.error("Erro enviar o video")
+            await browser.close()
+            return None
+        breakpoint()
+
+
+        
